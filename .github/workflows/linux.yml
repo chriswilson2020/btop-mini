@@ -9,13 +9,13 @@ jobs:
     strategy:
       matrix:
         include:
-          - runner: ubuntu-24.04
+          - runner: ubuntu-26.04
             artifact: btop-mini-linux-x86_64
-          - runner: ubuntu-24.04-arm
+          - runner: ubuntu-26.04-arm
             artifact: btop-mini-linux-aarch64
     runs-on: ${{ matrix.runner }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build
         run: |
           cmake -S . -B build -DBTOP_GPU=OFF -DBTOP_LTO=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
@@ -30,7 +30,7 @@ jobs:
         run: |
           strip build/btop-mini
           cp build/btop-mini ${{ matrix.artifact }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
