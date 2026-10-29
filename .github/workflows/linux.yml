@@ -18,7 +18,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build
         run: |
-          make -j2 GPU_SUPPORT=false
+          make -j2
       - name: Verify executable
         run: ./bin/btop-mini --version
       - name: Smoke test 52x24 TUI

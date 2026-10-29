@@ -14,14 +14,14 @@ The dashboard uses btop's native C++ collectors and displays logical cores, load
 ## Build
 
 ```sh
-make -j"$(nproc)" GPU_SUPPORT=false
+make
 ./bin/btop-mini
 ```
 
 To install it as `/usr/local/bin/btop-mini`:
 
 ```sh
-sudo make install GPU_SUPPORT=false
+sudo make install
 btop-mini
 ```
 

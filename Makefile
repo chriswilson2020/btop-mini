@@ -92,19 +92,9 @@ endif
 
 override PLATFORM_LC := $(shell echo $(PLATFORM) | tr '[:upper:]' '[:lower:]')
 
-#? GPU Support
-ifeq ($(PLATFORM_LC)$(ARCH),linuxx86_64)
-	ifneq ($(STATIC),true)
-		GPU_SUPPORT := true
-		INTEL_GPU_SUPPORT := true
-	endif
-endif
-ifeq ($(PLATFORM_LC)$(ARCH),macosarm64)
-	GPU_SUPPORT := true
-endif
-ifneq ($(GPU_SUPPORT),true)
-	GPU_SUPPORT := false
-endif
+#? GPU panels are intentionally disabled in the compact 52x24 fork.
+override GPU_SUPPORT := false
+override INTEL_GPU_SUPPORT := false
 
 ifeq ($(GPU_SUPPORT),true)
 	override ADDFLAGS += -DGPU_SUPPORT
