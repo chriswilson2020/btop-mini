@@ -152,7 +152,7 @@ void term_resize(bool force) {
 	Config::unlock();
 
 	auto boxes = Config::getS("shown_boxes");
-	auto min_size = Term::get_min_size(boxes);
+	auto min_size = array<int, 2>{Mini::min_width, Mini::min_height};
 	auto minWidth = min_size.at(0), minHeight = min_size.at(1);
 
 	while (not force or (Term::width < minWidth or Term::height < minHeight)) {
@@ -197,7 +197,7 @@ void term_resize(bool force) {
 					}
 				}
 			}
-			min_size = Term::get_min_size(boxes);
+			min_size = array<int, 2>{Mini::min_width, Mini::min_height};
 			minWidth = min_size.at(0);
 			minHeight = min_size.at(1);
 		}
@@ -506,6 +506,18 @@ namespace Runner {
 
 			//* Run collection and draw functions for all boxes
 			try {
+				if (Mini::process_view) {
+					auto& processes = Proc::collect(conf.no_update);
+					if (not pause_output) output += Mini::draw_processes(processes);
+				}
+				else {
+					auto& cpu = Cpu::collect(conf.no_update);
+					auto& mem = Mem::collect(conf.no_update);
+					auto& net = Net::collect(conf.no_update);
+					if (not pause_output) output += Mini::draw_dashboard(cpu, mem, net);
+				}
+				if (true) {}
+				else {
 #if defined(GPU_SUPPORT)
 				//? GPU data collection
 				const bool gpu_in_cpu_panel = Gpu::gpu_names.size() > 0 and (
@@ -641,6 +653,7 @@ namespace Runner {
 					catch (const std::exception& e) {
 						throw std::runtime_error("Proc:: -> " + string{e.what()});
 					}
+				}
 				}
 
 			}
@@ -1080,7 +1093,7 @@ static auto configure_tty_mode(std::optional<bool> force_tty) {
 	}
 
 	{
-		const auto [x, y] = Term::get_min_size(Config::getS("shown_boxes"));
+		const auto [x, y] = array<int, 2>{Mini::min_width, Mini::min_height};
 		if (Term::height < y or Term::width < x) {
 			pthread_sigmask(SIG_SETMASK, &Input::signal_mask, &mask);
 			term_resize(true);

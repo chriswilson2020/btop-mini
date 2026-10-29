@@ -262,6 +262,13 @@ namespace Cpu {
 	string trim_name(string);
 }
 
+namespace Mini {
+	extern bool process_view;
+	extern int core_offset;
+	constexpr int min_width = 40;
+	constexpr int min_height = 16;
+}
+
 namespace Mem {
 	extern string box;
 	extern int x, y, width, height, min_width, min_height;

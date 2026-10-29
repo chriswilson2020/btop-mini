@@ -25,6 +25,8 @@ tab-size = 4
 #include <unordered_map>
 #include <vector>
 
+#include "btop_shared.hpp"
+
 using std::array;
 using std::deque;
 using std::string;
@@ -132,6 +134,11 @@ namespace Draw {
 
 	//* Calculate sizes of boxes, draw outlines and save to enabled boxes namespaces
 	void calcSizes();
+}
+
+namespace Mini {
+	string draw_dashboard(const Cpu::cpu_info& cpu, const Mem::mem_info& mem, const Net::net_info& net);
+	string draw_processes(const vector<Proc::proc_info>& processes);
 }
 
 namespace Proc {

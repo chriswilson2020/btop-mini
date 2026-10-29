@@ -1,0 +1,36 @@
+name: Linux builds
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            artifact: btop-mini-linux-x86_64
+          - runner: ubuntu-24.04-arm
+            artifact: btop-mini-linux-aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S . -B build -DBTOP_GPU=OFF -DBTOP_LTO=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake --build build -j2
+      - name: Verify executable
+        run: ./build/btop-mini --version
+      - name: Smoke test 52x24 TUI
+        run: |
+          (sleep 2; printf P; sleep 2; printf P; sleep 1; printf q) | script -q -c 'stty rows 24 cols 52; TERM=xterm-256color ./build/btop-mini' smoke.log
+          grep -a 'btop-mini' smoke.log
+      - name: Package
+        run: |
+          strip build/btop-mini
+          cp build/btop-mini ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}

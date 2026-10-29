@@ -221,7 +221,21 @@ namespace Input {
 			//? Global input actions
 			if (not filtering) {
 				bool keep_going = false;
-				if (key == "q") {
+			if (is_in(key, "p", "P")) {
+				atomic_wait(Runner::active);
+				Mini::process_view = not Mini::process_view;
+				Config::set("proc_start", 0);
+				Config::set("proc_selected", 0);
+				Runner::run("all", false, true);
+				return;
+			}
+			if (not Mini::process_view and is_in(key, "up", "down", "page_up", "page_down")) {
+				const int amount = is_in(key, "page_up", "page_down") ? std::max(1, Term::height - 16) : 1;
+				Mini::core_offset = std::max(0, Mini::core_offset + (is_in(key, "down", "page_down") ? amount : -amount));
+				Runner::run("all", true, true);
+				return;
+			}
+			if (key == "q") {
 					clean_quit(0);
 				}
 				else if (is_in(key, "escape", "m")) {
