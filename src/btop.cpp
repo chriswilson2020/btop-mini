@@ -322,11 +322,11 @@ static void _signal_handler(const int sig) {
 }
 
 //* Config init
-void init_config(bool low_color, std::optional<std::string>& filter) {
+void init_config(bool, std::optional<std::string>& filter) {
 	atomic_lock lck(Global::init_conf);
 	vector<string> load_warnings;
 	Config::load(Config::conf_file, load_warnings);
-	Config::set("lowcolor", (low_color ? true : not Config::getB("truecolor")));
+	Config::set("lowcolor", true);
 
 	static bool first_init = true;
 
@@ -816,21 +816,11 @@ namespace Runner {
 }
 
 static auto configure_tty_mode(std::optional<bool> force_tty) {
-	if (force_tty.has_value()) {
+	if (force_tty.has_value() and force_tty.value()) {
 		Config::set("tty_mode", force_tty.value());
 		Logger::debug("TTY mode set via command line");
 	}
-	else if (Config::getB("force_tty")) {
-		Config::set("tty_mode", true);
-		Logger::debug("TTY mode set via config");
-	}
-
-#if !defined(__APPLE__) && !defined(__OpenBSD__) && !defined(__NetBSD__)
-	else if (Term::current_tty.starts_with("/dev/tty")) {
-		Config::set("tty_mode", true);
-		Logger::debug("Auto detect real TTY");
-	}
-#endif
+	else Config::set("tty_mode", false);
 
 	Logger::debug("TTY mode enabled: {}", Config::getB("tty_mode"));
 }
@@ -869,6 +859,7 @@ static auto configure_tty_mode(std::optional<bool> force_tty) {
 			return error;
 		}
 	}
+	cli.force_utf = true;
 
 	Global::debug = cli.debug;
 
@@ -879,7 +870,7 @@ static auto configure_tty_mode(std::optional<bool> force_tty) {
 			Config::conf_file = cli.config_file.value();
 		} else if (config_dir.has_value()) {
 			Config::conf_dir = config_dir.value();
-			Config::conf_file = Config::conf_dir / "btop.conf";
+			Config::conf_file = Config::conf_dir / "btop-mini.conf";
 
 			auto log_file = Config::get_log_file();
 			if (log_file.has_value()) {

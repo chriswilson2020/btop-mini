@@ -406,12 +406,12 @@ namespace Config {
 			std::error_code error;
 			if (const auto xdg_config_home = std::getenv("XDG_CONFIG_HOME"); xdg_config_home != nullptr) {
 				if (fs::exists(xdg_config_home, error)) {
-					config_dir = fs::path(xdg_config_home) / "btop";
+					config_dir = fs::path(xdg_config_home) / "btop-mini";
 				}
 			} else if (const auto home = std::getenv("HOME"); home != nullptr) {
 				error.clear();
 				if (fs::exists(home, error)) {
-					config_dir = fs::path(home) / ".config" / "btop";
+					config_dir = fs::path(home) / ".config" / "btop-mini";
 				}
 				if (error) {
 					fmt::print(stderr, "\033[0;31mWarning: \033[0m{} could not be accessed: {}\n", config_dir.string(), error.message());
