@@ -18,18 +18,17 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build
         run: |
-          cmake -S . -B build -DBTOP_GPU=OFF -DBTOP_LTO=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -j2
+          make -j2 GPU_SUPPORT=false
       - name: Verify executable
-        run: ./build/btop-mini --version
+        run: ./bin/btop-mini --version
       - name: Smoke test 52x24 TUI
         run: |
-          (sleep 2; printf P; sleep 2; printf P; sleep 1; printf q) | script -q -c 'stty rows 24 cols 52; TERM=xterm-256color ./build/btop-mini' smoke.log
+          (sleep 2; printf P; sleep 2; printf P; sleep 1; printf q) | script -q -c 'stty rows 24 cols 52; TERM=xterm-256color ./bin/btop-mini' smoke.log
           grep -a 'btop-mini' smoke.log
       - name: Package
         run: |
-          strip build/btop-mini
-          cp build/btop-mini ${{ matrix.artifact }}
+          strip bin/btop-mini
+          cp bin/btop-mini ${{ matrix.artifact }}
       - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact }}

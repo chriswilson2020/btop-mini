@@ -14,10 +14,18 @@ The dashboard uses btop's native C++ collectors and displays logical cores, load
 ## Build
 
 ```sh
-cmake -S . -B build -DBTOP_GPU=OFF -DBUILD_TESTING=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-./build/btop-mini
+make -j"$(nproc)" GPU_SUPPORT=false
+./bin/btop-mini
 ```
+
+To install it as `/usr/local/bin/btop-mini`:
+
+```sh
+sudo make install GPU_SUPPORT=false
+btop-mini
+```
+
+The executable is always named `btop-mini`; it does not replace or conflict with an existing `btop` installation.
 
 GPU support is deliberately disabled in the compact build command because the 52×24 dashboard does not display GPU panels. The source remains cross-platform through btop's existing Linux, macOS, FreeBSD, OpenBSD, and NetBSD collectors.
 
