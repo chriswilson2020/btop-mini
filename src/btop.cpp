@@ -326,7 +326,8 @@ void init_config(bool, std::optional<std::string>& filter) {
 	atomic_lock lck(Global::init_conf);
 	vector<string> load_warnings;
 	Config::load(Config::conf_file, load_warnings);
-	Config::set("lowcolor", true);
+	Config::set("lowcolor", false);
+	Config::set("color_theme", "TTY"s);
 
 	static bool first_init = true;
 
