@@ -2248,78 +2248,102 @@ namespace Mini {
 	bool process_view = false;
 	int core_offset = 0;
 
-	static string line(const int row, const string& text, const string& color = Theme::c("main_fg")) {
-		return Mv::to(row, 1) + color + ljust(uresize(text, Term::width), Term::width);
+	static string panel_title(const int row, const int column, const string& text, const string& color) {
+		return Mv::to(row, column) + color + Symbols::title_left + Theme::c("title") + Fx::b
+			+ text + Fx::ub + color + Symbols::title_right;
 	}
 
 	string draw_dashboard(const Cpu::cpu_info& cpu, const Mem::mem_info& mem, const Net::net_info& net) {
-		string out = Term::clear + Fx::reset;
-		const auto total = safeVal(cpu.cpu_percent, "total"s).empty() ? 0 : safeVal(cpu.cpu_percent, "total"s).back();
-		out += line(1, fmt::format(" btop-mini  CPU {:>3}%  load {:.2f} {:.2f} {:.2f}  [P] procs", total, cpu.load_avg[0], cpu.load_avg[1], cpu.load_avg[2]), Theme::c("title"));
+		const int cpu_height = 10;
+		const int middle_y = 11;
+		const int middle_height = 7;
+		const int bottom_y = 18;
+		const int bottom_height = Term::height - bottom_y + 1;
+		const int half_width = Term::width / 2;
+		const int net_width = 34;
+		string out = Term::clear + Fx::reset + Theme::c("main_bg");
+		out += Draw::createBox(1, 1, Term::width, cpu_height, Theme::c("cpu_box"), true, "cpu");
+		out += Draw::createBox(1, middle_y, half_width, middle_height, Theme::c("mem_box"), true, "mem");
+		out += Draw::createBox(half_width + 1, middle_y, Term::width - half_width, middle_height, Theme::c("mem_box"), true, "disks");
+		out += Draw::createBox(1, bottom_y, net_width, bottom_height, Theme::c("net_box"), true, "net");
+		out += Draw::createBox(net_width + 1, bottom_y, Term::width - net_width, bottom_height, Theme::c("cpu_box"), true, "temp");
 
-		const int core_rows = max(2, min(8, Term::height - 16));
-		const int columns = Term::width >= 48 ? 2 : 1;
+		const auto total = safeVal(cpu.cpu_percent, "total"s).empty() ? 0 : safeVal(cpu.cpu_percent, "total"s).back();
+		Draw::Meter total_meter(12, "cpu");
+		out += Mv::to(2, 3) + Theme::c("title") + Fx::b + fmt::format("Total {:>3}% ", total) + total_meter(total);
+		out += panel_title(cpu_height, Term::width - 22, fmt::format("load {:.1f} {:.1f} {:.1f}", cpu.load_avg[0], cpu.load_avg[1], cpu.load_avg[2]), Theme::c("cpu_box"));
+		out += panel_title(1, Term::width - 7, "P proc", Theme::c("cpu_box"));
+
+		const int core_rows = 6;
+		const int columns = 2;
 		const int visible = core_rows * columns;
 		core_offset = clamp(core_offset, 0, max(0, static_cast<int>(cpu.core_percent.size()) - visible));
+		Draw::Meter core_meter(10, "cpu");
 		for (int index = 0; index < visible and core_offset + index < static_cast<int>(cpu.core_percent.size()); index++) {
 			const int core = core_offset + index;
 			const auto percent = cpu.core_percent.at(core).empty() ? 0 : cpu.core_percent.at(core).back();
 			const int column = index / core_rows;
 			const int row = 3 + index % core_rows;
-			const int width = Term::width / columns;
-			const int meter_width = max(4, width - 14);
-			const int filled = clamp(static_cast<int>(percent) * meter_width / 100, 0, meter_width);
-			out += Mv::to(row, 2 + column * width) + Theme::c("main_fg")
-				+ fmt::format("C{:02} {:>3}% ", core, percent) + Theme::c("cpu_mid")
-				+ string(filled, '|') + Theme::c("inactive_fg") + string(meter_width - filled, '.');
+			out += Mv::to(row, 3 + column * half_width) + Theme::c("main_fg")
+				+ fmt::format("C{:02} {:>3}% ", core, percent) + core_meter(percent);
 		}
 		if (static_cast<int>(cpu.core_percent.size()) > visible)
-			out += line(2 + core_rows, fmt::format(" cores {}-{} of {}  [Up/Down] scroll", core_offset, min(core_offset + visible - 1, static_cast<int>(cpu.core_percent.size()) - 1), cpu.core_percent.size()), Theme::c("inactive_fg"));
+			out += panel_title(cpu_height, 3, fmt::format("cores {}-{}  ↑↓", core_offset, min(core_offset + visible - 1, static_cast<int>(cpu.core_percent.size()) - 1)), Theme::c("cpu_box"));
 
-		int row = 4 + core_rows;
 		const auto mem_total = Mem::get_totalMem();
 		const auto mem_used = safeVal(mem.stats, "used"s);
+		const auto mem_available = safeVal(mem.stats, "available"s);
 		const auto swap_total = safeVal(mem.stats, "swap_total"s);
 		const auto swap_used = safeVal(mem.stats, "swap_used"s);
-		out += line(row++, fmt::format(" Memory {:>7}/{:<7} {:>3}%   Swap {:>7}/{:<7} {:>3}%",
-			floating_humanizer(mem_used, true), floating_humanizer(mem_total, true), mem_total ? mem_used * 100 / mem_total : 0,
-			floating_humanizer(swap_used, true), floating_humanizer(swap_total, true), swap_total ? swap_used * 100 / swap_total : 0));
+		Draw::Meter used_meter(8, "used");
+		Draw::Meter available_meter(8, "available");
+		const int used_percent = mem_total ? mem_used * 100 / mem_total : 0;
+		const int available_percent = mem_total ? mem_available * 100 / mem_total : 0;
+		const int swap_percent = swap_total ? swap_used * 100 / swap_total : 0;
+		out += Mv::to(middle_y + 1, 3) + Theme::c("title") + "used " + rjust(floating_humanizer(mem_used, true), 6) + ' ' + used_meter(used_percent);
+		out += Mv::to(middle_y + 2, 3) + Theme::c("title") + "avail" + rjust(floating_humanizer(mem_available, true), 6) + ' ' + available_meter(available_percent);
+		out += Mv::to(middle_y + 3, 3) + Theme::c("title") + "swap " + rjust(floating_humanizer(swap_used, true), 6) + ' ' + used_meter(swap_percent);
+		out += Mv::to(middle_y + 4, 3) + Theme::c("inactive_fg") + fmt::format("total {}", floating_humanizer(mem_total, true));
 
-		int disks = 0;
+		int disk_row = middle_y + 1;
+		Draw::Meter disk_meter(6, "used");
 		for (const auto& name : mem.disks_order) {
-			if (row >= Term::height - 5 or disks++ >= 2) break;
+			if (disk_row >= middle_y + middle_height - 1) break;
 			const auto& disk = mem.disks.at(name);
-			out += line(row++, fmt::format(" Disk {:<12} {:>7}/{:<7} {:>3}%", uresize(name, 12), floating_humanizer(disk.used, true), floating_humanizer(disk.total, true), disk.used_percent));
+			out += Mv::to(disk_row++, half_width + 3) + Theme::c("title") + ljust(uresize(name, 7), 7)
+				+ fmt::format("{:>3}% ", disk.used_percent) + disk_meter(disk.used_percent);
 		}
 
 		const auto down = safeVal(net.stat, "download"s);
 		const auto up = safeVal(net.stat, "upload"s);
-		out += line(row++, fmt::format(" Net {:<10} down {:>9}  up {:>9}", uresize(Net::selected_iface, 10), floating_humanizer(down.speed, true, 0, false, true), floating_humanizer(up.speed, true, 0, false, true)));
+		const int down_percent = down.top ? clamp(static_cast<int>(down.speed * 100 / down.top), 0, 100) : 0;
+		const int up_percent = up.top ? clamp(static_cast<int>(up.speed * 100 / up.top), 0, 100) : 0;
+		Draw::Meter down_meter(12, "download");
+		Draw::Meter up_meter(12, "upload");
+		out += panel_title(bottom_y, 7, uresize(Net::selected_iface, 10), Theme::c("net_box"));
+		out += Mv::to(bottom_y + 1, 3) + Theme::g("download").at(100) + "↓ " + rjust(floating_humanizer(down.speed, true, 0, false, true), 8) + ' ' + down_meter(down_percent);
+		out += Mv::to(bottom_y + 2, 3) + Theme::g("upload").at(100) + "↑ " + rjust(floating_humanizer(up.speed, true, 0, false, true), 8) + ' ' + up_meter(up_percent);
+		out += Mv::to(bottom_y + 3, 3) + Theme::c("inactive_fg") + "total ↓" + rjust(floating_humanizer(down.total, true), 8) + " ↑" + rjust(floating_humanizer(up.total, true), 8);
+		out += Mv::to(bottom_y + 4, 3) + Theme::c("inactive_fg") + "n/b iface   +/- update";
 
-		string temps = " Temp";
+		int temp_row = bottom_y + 1;
 		if (Cpu::got_sensors and not cpu.temp.empty() and not cpu.temp.front().empty()) {
-			for (size_t index = 0; index < min<size_t>(cpu.temp.size(), 4); index++)
-				if (not cpu.temp[index].empty()) temps += fmt::format(" T{}:{}C", index, cpu.temp[index].back());
+			Draw::Meter temp_meter(7, "temp");
+			for (size_t index = 0; index < min<size_t>(cpu.temp.size(), 4) and temp_row < Term::height; index++) {
+				if (cpu.temp[index].empty()) continue;
+				const auto value = cpu.temp[index].back();
+				out += Mv::to(temp_row++, net_width + 3) + Theme::c("title") + fmt::format("T{} {:>3}° ", index, value) + temp_meter(cpu.temp_max ? value * 100 / cpu.temp_max : value);
+			}
 		}
-		else temps += " unavailable";
-		out += line(row++, temps);
-		out += line(Term::height, " P processes | q quit | +/- interval | n/b iface", Theme::c("inactive_fg"));
+		else out += Mv::to(temp_row, net_width + 3) + Theme::c("inactive_fg") + "no sensors";
+		out += panel_title(Term::height, Term::width - 10, "q quit", Theme::c("cpu_box"));
 		return out + Fx::reset;
 	}
 
 	string draw_processes(const vector<Proc::proc_info>& processes) {
-		string out = Term::clear + Fx::reset;
-		Proc::select_max = max(1, Term::height - 3);
-		const int start = clamp(Config::getI("proc_start"), 0, max(0, static_cast<int>(processes.size()) - Proc::select_max));
-		const int selected = Config::getI("proc_selected");
-		out += line(1, fmt::format(" btop-mini processes ({})   [P] dashboard", processes.size()), Theme::c("title"));
-		out += line(2, "   PID NAME                    CPU%   MEM", Theme::c("inactive_fg"));
-		for (int index = 0; index < Proc::select_max and start + index < static_cast<int>(processes.size()); index++) {
-			const auto& process = processes.at(start + index);
-			const auto color = index + 1 == selected ? Theme::c("selected_bg") + Theme::c("selected_fg") : Theme::c("main_fg");
-			out += line(3 + index, fmt::format("{:>6} {:<23} {:>5.1f} {:>7}", process.pid, uresize(process.name, 23), process.cpu_p, floating_humanizer(process.mem, true)), color);
-		}
-		return out + Fx::reset;
+		Proc::box = Draw::createBox(1, 1, Term::width, Term::height, Theme::c("proc_box"), true, "proc");
+		Proc::box += panel_title(1, Term::width - 12, "P dashboard", Theme::c("proc_box"));
+		return Term::clear + Proc::box + Proc::draw(processes, true, false);
 	}
 }
 
