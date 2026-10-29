@@ -2248,9 +2248,18 @@ namespace Mini {
 	bool process_view = false;
 	int core_offset = 0;
 
+	static string create_box(const int x, const int y, const int width, const int height, const string& color, const string& title) {
+		string out = Mv::to(y, x) + color + '+' + string(width - 2, '-') + '+';
+		for (int row = 1; row < height - 1; row++)
+			out += Mv::to(y + row, x) + color + '|' + Theme::c("main_bg") + string(width - 2, ' ') + color + '|';
+		out += Mv::to(y + height - 1, x) + color + '+' + string(width - 2, '-') + '+';
+		if (not title.empty()) out += Mv::to(y, x + 2) + color + '[' + Theme::c("title") + Fx::b + title + Fx::ub + color + ']';
+		return out;
+	}
+
 	static string panel_title(const int row, const int column, const string& text, const string& color) {
-		return Mv::to(row, column) + color + Symbols::title_left + Theme::c("title") + Fx::b
-			+ text + Fx::ub + color + Symbols::title_right;
+		return Mv::to(row, column) + color + '[' + Theme::c("title") + Fx::b
+			+ text + Fx::ub + color + ']';
 	}
 
 	string draw_dashboard(const Cpu::cpu_info& cpu, const Mem::mem_info& mem, const Net::net_info& net) {
@@ -2262,11 +2271,11 @@ namespace Mini {
 		const int half_width = Term::width / 2;
 		const int net_width = 34;
 		string out = Term::clear + Fx::reset + Theme::c("main_bg");
-		out += Draw::createBox(1, 1, Term::width, cpu_height, Theme::c("cpu_box"), true, "cpu");
-		out += Draw::createBox(1, middle_y, half_width, middle_height, Theme::c("mem_box"), true, "mem");
-		out += Draw::createBox(half_width + 1, middle_y, Term::width - half_width, middle_height, Theme::c("mem_box"), true, "disks");
-		out += Draw::createBox(1, bottom_y, net_width, bottom_height, Theme::c("net_box"), true, "net");
-		out += Draw::createBox(net_width + 1, bottom_y, Term::width - net_width, bottom_height, Theme::c("cpu_box"), true, "temp");
+		out += create_box(1, 1, Term::width, cpu_height, Theme::c("cpu_box"), "cpu");
+		out += create_box(1, middle_y, half_width, middle_height, Theme::c("mem_box"), "mem");
+		out += create_box(half_width + 1, middle_y, Term::width - half_width, middle_height, Theme::c("mem_box"), "disks");
+		out += create_box(1, bottom_y, net_width, bottom_height, Theme::c("net_box"), "net");
+		out += create_box(net_width + 1, bottom_y, Term::width - net_width, bottom_height, Theme::c("cpu_box"), "temp");
 
 		const auto total = safeVal(cpu.cpu_percent, "total"s).empty() ? 0 : safeVal(cpu.cpu_percent, "total"s).back();
 		Draw::Meter total_meter(12, "cpu");
@@ -2341,7 +2350,7 @@ namespace Mini {
 	}
 
 	string draw_processes(const vector<Proc::proc_info>& processes) {
-		Proc::box = Draw::createBox(1, 1, Term::width, Term::height, Theme::c("proc_box"), true, "proc");
+		Proc::box = create_box(1, 1, Term::width, Term::height, Theme::c("proc_box"), "proc");
 		Proc::box += panel_title(1, Term::width - 12, "P dashboard", Theme::c("proc_box"));
 		return Term::clear + Proc::box + Proc::draw(processes, true, false);
 	}
